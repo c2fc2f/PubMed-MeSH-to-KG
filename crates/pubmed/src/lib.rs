@@ -100,7 +100,7 @@ pub struct PubMed {
     /// # Default Behavior
     ///
     /// When using [`PubMed::default()`], this automatically resolves to a
-    /// `pm2kg`subdirectory within the system's standard cache location
+    /// `pubmed-ftp`subdirectory within the system's standard cache location
     /// (determined via [`dirs::cache_dir`]).
     cache: Option<PathBuf>,
 }
@@ -191,7 +191,7 @@ impl Default for PubMed {
             client: Default::default(),
             base_url: Url::parse(DEFAULT_URL)
                 .expect("Hardcoded DEFAULT_URL is invalid"),
-            cache: dirs::cache_dir().map(|p| p.join("pm2kg")),
+            cache: dirs::cache_dir().map(|p| p.join("pubmed-ftp")),
         }
     }
 }
@@ -222,7 +222,7 @@ impl PubMed {
                 Url::parse(DEFAULT_URL)
                     .expect("Hardcoded DEFAULT_URL is invalid"),
             ),
-            cache: dirs::cache_dir().map(|p| p.join("pm2kg")),
+            cache: dirs::cache_dir().map(|p| p.join("pubmed-ftp")),
         }
     }
 

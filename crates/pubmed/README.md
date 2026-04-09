@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-By default, `PubMed::new()` points to the official NCBI FTP server and caches files under the system cache directory (e.g. `~/.cache/pm2kg` on Linux).
+By default, `PubMed::new()` points to the official NCBI FTP server and caches files under the system cache directory (e.g. `~/.cache/pubmed-ftp` on Linux).
 
 ### Custom configuration
 
@@ -104,7 +104,7 @@ This library is designed for high-throughput processing. When parsing large volu
 
 When a cache directory is configured, downloaded baseline files are written to disk and reused on subsequent runs. This is strongly recommended when processing the full baseline, which consists of hundreds of files totalling tens of gigabytes. If caching is disabled (`.cache(None)`), all data is kept in memory only.
 
-The default cache path resolves to a `pm2kg` subdirectory inside the OS standard cache directory, as returned by [`dirs::cache_dir`](https://docs.rs/dirs).
+The default cache path resolves to a `pubmed-ftp` subdirectory inside the OS standard cache directory, as returned by [`dirs::cache_dir`](https://docs.rs/dirs).
 
 ## Error handling
 
