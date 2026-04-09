@@ -31,4 +31,7 @@ missing_panics_doc = "warn"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
+mimalloc = { version = "0.1", features = ["v3"] }
+futures = "0.3"
 pubmed = { path = "crates/pubmed/" }
+csv-async = { version = "1", features = ["tokio"] }

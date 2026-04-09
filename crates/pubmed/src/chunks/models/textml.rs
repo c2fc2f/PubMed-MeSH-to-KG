@@ -336,7 +336,7 @@ impl ContentNode {
     /// A [`String`] containing the Markdown/LaTeX equivalent of the tree.
     fn to_markdown(&self) -> String {
         match self {
-            Self::Text(s) => s.clone(),
+            Self::Text(s) => s.trim().to_string(),
 
             Self::Sub { children } => {
                 let inner = join(children);

@@ -747,7 +747,7 @@ pub struct Article {
 
     /// The title of the article.
     #[serde(rename = "ArticleTitle")]
-    pub article_title: Text,
+    pub title: Text,
 
     /// The page range or number for the article.
     /// One of (Pagination, ELocationID*) or (ELocationID+).
@@ -1169,15 +1169,15 @@ pub struct DataBankList {
 pub struct DateYMD {
     /// The year.
     #[serde(rename = "Year")]
-    pub year: String,
+    pub year: i32,
 
     /// The month.
     #[serde(rename = "Month")]
-    pub month: String,
+    pub month: u8,
 
     /// The day.
     #[serde(rename = "Day")]
-    pub day: String,
+    pub day: u8,
 }
 
 /// The name component of a Medical Subject Heading (MeSH) descriptor.
@@ -1857,4 +1857,3 @@ pub struct SupplMeshList {
     #[serde(rename = "SupplMeshName")]
     pub names: Vec<SupplMeshName>,
 }
-
