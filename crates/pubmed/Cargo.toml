@@ -1,0 +1,43 @@
+[package]
+name = "pubmed"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+missing_docs_in_private_items = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+[features]
+default = []
+debug_path = [
+  "dep:serde_path_to_error"
+]
+
+[dependencies]
+reqwest = { version = "0.13", features = ["stream"] }
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+tokio = "1"
+regex = "1"
+quick-xml = { version = "0.39", features = ["serialize"] }
+futures = "0.3"
+serde_path_to_error = { version = "0.1", optional = true }
+dirs = "6"
+async-compression = { version = "0.4", features = ["tokio", "gzip"] }
+tokio-util = { version = "0.7", features = ["io", "io-util"] }
+
+[dev-dependencies]
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+mimalloc = { version = "0.1", features = ["v3"] }
