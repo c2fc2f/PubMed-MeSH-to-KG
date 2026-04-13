@@ -10,9 +10,10 @@
 //! convert mixed-content text fields (containing inline HTML or MathML) into
 //! Markdown.
 
+pub(crate) mod processor;
 pub mod textml;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use textml::deserialize_to_markdown;
 
 /// Represents a simple Yes/No boolean flag frequently used in PubMed XML
@@ -410,7 +411,6 @@ pub enum DescriptorNameType {
 /// in the XML but are flattened into two separate [`Vec`]s here. Insertion
 /// order is not preserved across the different kinds.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedArticleSet")]
 pub struct PubmedArticleSet {
     /// The collection of standard PubMed articles.
     #[serde(rename = "PubmedArticle", default)]
@@ -427,7 +427,6 @@ pub struct PubmedArticleSet {
 
 /// Root element encapsulating a collection of Book Documents.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "BookDocumentSet")]
 pub struct BookDocumentSet {
     /// The collection of book documents.
     #[serde(rename = "BookDocument", default)]
@@ -440,7 +439,6 @@ pub struct BookDocumentSet {
 
 /// Root element exclusively containing PubMed book articles.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedBookArticleSet")]
 pub struct PubmedBookArticleSet {
     /// The collection of book articles.
     #[serde(rename = "PubmedBookArticle", default)]
@@ -453,7 +451,6 @@ pub struct PubmedBookArticleSet {
 
 /// Represents a single standard PubMed article record.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedArticle")]
 pub struct PubmedArticle {
     /// The core MEDLINE citation data for the article.
     #[serde(rename = "MedlineCitation")]
@@ -466,7 +463,6 @@ pub struct PubmedArticle {
 
 /// Represents a single book article or chapter record in PubMed.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedBookArticle")]
 pub struct PubmedBookArticle {
     /// The core document data for the book/chapter.
     #[serde(rename = "BookDocument")]
@@ -479,7 +475,6 @@ pub struct PubmedBookArticle {
 
 /// Contains detailed bibliographic information for a book or book chapter.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "BookDocument")]
 pub struct BookDocument {
     /// The PubMed Unique Identifier for the book document.
     #[serde(rename = "PMID")]
@@ -560,7 +555,6 @@ pub struct BookDocument {
 
 /// Contains a list of standard citations (PMIDs) marked for deletion.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "DeleteCitation")]
 pub struct DeleteCitation {
     /// 1 or more PMIDs targeted for removal.
     #[serde(rename = "PMID")]
@@ -569,7 +563,6 @@ pub struct DeleteCitation {
 
 /// Contains a list of book documents (PMIDs) marked for deletion.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "DeleteDocument")]
 pub struct DeleteDocument {
     /// A list of PMIDs targeted for removal.
     #[serde(rename = "PMID", default)]
@@ -583,7 +576,6 @@ pub struct DeleteDocument {
 /// Represents the core bibliographical and indexing data for a MEDLINE
 /// article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "MedlineCitation")]
 pub struct MedlineCitation {
     /// The owner of the citation data.
     #[serde(rename = "@Owner", default)]
@@ -688,7 +680,6 @@ pub struct MedlineCitation {
 
 /// Contains PubMed-specific metadata surrounding a standard article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedData")]
 pub struct PubmedData {
     /// Historical dates associated with the publication and indexing
     /// lifecycle.
@@ -714,7 +705,6 @@ pub struct PubmedData {
 
 /// Contains PubMed-specific metadata surrounding a book article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubmedBookData")]
 pub struct PubmedBookData {
     /// Historical dates associated with the publication lifecycle.
     #[serde(rename = "History")]
@@ -735,7 +725,6 @@ pub struct PubmedBookData {
 
 /// Holds specific details regarding the published article itself.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Article")]
 pub struct Article {
     /// The physical/electronic medium model of publication.
     #[serde(rename = "@PubModel")]
@@ -814,7 +803,6 @@ pub struct Text {
 
 /// Represents an abstract for an article or document.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Abstract")]
 pub struct Abstract {
     /// The text segments of the abstract (1 or more).
     #[serde(rename = "AbstractText")]
@@ -828,7 +816,6 @@ pub struct Abstract {
 /// Represents a single section or paragraph of an abstract text block.
 /// Deserialization automatically converts inline content into Markdown.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "AbstractText")]
 pub struct AbstractText {
     /// The section label (e.g., "METHODS", "RESULTS").
     #[serde(rename = "@Label")]
@@ -849,7 +836,6 @@ pub struct AbstractText {
 
 /// A wrapper for a list of dataset accession numbers.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "AccessionNumberList")]
 pub struct AccessionNumberList {
     /// The accession numbers (1 or more).
     #[serde(rename = "AccessionNumber")]
@@ -859,7 +845,6 @@ pub struct AccessionNumberList {
 /// Contains information about an author's or investigator's institutional
 /// affiliation.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "AffiliationInfo")]
 pub struct AffiliationInfo {
     /// The textual affiliation string.
     #[serde(rename = "Affiliation")]
@@ -873,7 +858,6 @@ pub struct AffiliationInfo {
 /// Represents a specific date in an article's history, typically its
 /// electronic release.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ArticleDate")]
 pub struct ArticleDate {
     /// The type of date, always "Electronic" per the DTD FIXED attribute.
     #[serde(rename = "@DateType", default = "fixed_electronic")]
@@ -899,7 +883,6 @@ fn fixed_electronic() -> String {
 
 /// Represents an external identifier associated with an article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ArticleId")]
 pub struct ArticleId {
     /// The specific type of the ID (e.g., DOI, PMC).
     #[serde(rename = "@IdType", default)]
@@ -912,35 +895,45 @@ pub struct ArticleId {
 
 /// A wrapper list for various article identifiers.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ArticleIdList")]
 pub struct ArticleIdList {
     /// The list of identifiers (1 or more).
     #[serde(rename = "ArticleId")]
     pub ids: Vec<ArticleId>,
 }
 
-/// Represents the name of a contributing individual or group.
-/// Can be either a segmented personal name or a collective organization name.
+/// Represents the identity of an author, ensuring either a
+/// personal name or a collective name is present.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum AuthorName {
-    /// A structured personal name.
-    Personal {
-        /// The person's last name or surname.
+#[serde(untagged)]
+pub enum AuthorType {
+    /// A human author with a mandatory last name.
+    Person {
+        /// Author's surname.
+        #[serde(rename = "LastName")]
         last_name: String,
-        /// The person's given or first name.
+
+        /// Author's given name.
+        #[serde(rename = "ForeName")]
         fore_name: Option<String>,
-        /// The person's initials.
+
+        /// Author's initials.
+        #[serde(rename = "Initials")]
         initials: Option<String>,
-        /// Generational suffix (e.g., Jr., III).
+
+        /// Author's generational suffix.
+        #[serde(rename = "Suffix")]
         suffix: Option<String>,
     },
-    /// The name of an organization or group acting collectively.
-    Collective(String),
+    /// An organization or group.
+    Collective {
+        /// Group or organizational name.
+        #[serde(rename = "CollectiveName")]
+        name: String,
+    },
 }
 
 /// Represents a single author who contributed to a document.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Author")]
+#[derive(Debug, Clone, Serialize)]
 pub struct Author {
     /// Indicates if the author name is structurally valid.
     #[serde(rename = "@ValidYN", default)]
@@ -950,25 +943,9 @@ pub struct Author {
     #[serde(rename = "@EqualContrib")]
     pub equal_contrib: Option<YN>,
 
-    /// Author's surname.
-    #[serde(rename = "LastName")]
-    pub last_name: Option<String>,
-
-    /// Author's given name.
-    #[serde(rename = "ForeName")]
-    pub fore_name: Option<String>,
-
-    /// Author's initials.
-    #[serde(rename = "Initials")]
-    pub initials: Option<String>,
-
-    /// Author's generational suffix.
-    #[serde(rename = "Suffix")]
-    pub suffix: Option<String>,
-
-    /// Group or organizational name.
-    #[serde(rename = "CollectiveName")]
-    pub collective_name: Option<String>,
+    /// The name details of the author (Individual or Collective).
+    #[serde(flatten)]
+    pub name: AuthorType,
 
     /// Author identifiers (e.g., ORCID).
     #[serde(rename = "Identifier", default)]
@@ -979,9 +956,105 @@ pub struct Author {
     pub affiliation_infos: Vec<AffiliationInfo>,
 }
 
+impl<'de> Deserialize<'de> for Author {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Self, D::Error> {
+        struct AuthorVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for AuthorVisitor {
+            type Value = Author;
+
+            fn expecting(
+                &self,
+                f: &mut std::fmt::Formatter,
+            ) -> std::fmt::Result {
+                f.write_str("an Author element")
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Self::Value, A::Error> {
+                let mut valid_yn: Option<YN> = None;
+                let mut equal_contrib: Option<YN> = None;
+
+                let mut last_name: Option<String> = None;
+                let mut fore_name: Option<String> = None;
+                let mut initials: Option<String> = None;
+                let mut suffix: Option<String> = None;
+
+                let mut collective_name: Option<String> = None;
+
+                let mut identifiers: Vec<Identifier> = Vec::new();
+                let mut affiliation_infos: Vec<AffiliationInfo> = Vec::new();
+
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "@ValidYN" => {
+                            valid_yn = Some(map.next_value()?);
+                        }
+                        "@EqualContrib" => {
+                            equal_contrib = Some(map.next_value()?);
+                        }
+                        "LastName" => {
+                            last_name = Some(map.next_value()?);
+                        }
+                        "ForeName" => {
+                            fore_name = Some(map.next_value()?);
+                        }
+                        "Initials" => {
+                            initials = Some(map.next_value()?);
+                        }
+                        "Suffix" => {
+                            suffix = Some(map.next_value()?);
+                        }
+                        "CollectiveName" => {
+                            collective_name = Some(map.next_value()?);
+                        }
+                        "Identifier" => {
+                            identifiers.push(map.next_value()?);
+                        }
+                        "AffiliationInfo" => {
+                            affiliation_infos.push(map.next_value()?);
+                        }
+                        _ => {
+                            map.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+
+                let name: AuthorType = match (last_name, collective_name) {
+                    (Some(last_name), _) => AuthorType::Person {
+                        last_name,
+                        fore_name,
+                        initials,
+                        suffix,
+                    },
+                    (None, Some(name)) => AuthorType::Collective { name },
+                    (None, None) => {
+                        return Err(serde::de::Error::custom(
+                            "Author must have either LastName or CollectiveName",
+                        ));
+                    }
+                };
+
+                Ok(Author {
+                    valid_yn: valid_yn.unwrap_or_default(),
+                    equal_contrib,
+                    name,
+                    identifiers,
+                    affiliation_infos,
+                })
+            }
+        }
+
+        deserializer.deserialize_map(AuthorVisitor)
+    }
+}
+
 /// Wraps a collection of authors for a specific document.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "AuthorList")]
 pub struct AuthorList {
     /// Indicates if the list is complete.
     #[serde(rename = "@CompleteYN", default)]
@@ -1020,7 +1093,6 @@ pub struct DateFlex {
 
 /// Contains information specific to a book entity.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Book")]
 pub struct Book {
     /// The publishing organization.
     #[serde(rename = "Publisher")]
@@ -1085,7 +1157,6 @@ pub struct Book {
 
 /// Represents a chemical substance discussed in a citation.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Chemical")]
 pub struct Chemical {
     /// The unique chemical registry number.
     #[serde(rename = "RegistryNumber")]
@@ -1098,7 +1169,6 @@ pub struct Chemical {
 
 /// A wrapper for a list of chemicals.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ChemicalList")]
 pub struct ChemicalList {
     /// The chemical substances (1 or more).
     #[serde(rename = "Chemical")]
@@ -1108,7 +1178,6 @@ pub struct ChemicalList {
 /// Describes a link between the current document and another publication
 /// (e.g., errata, retractions, comments).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "CommentsCorrections")]
 pub struct CommentsCorrections {
     /// The specific type of relationship.
     #[serde(rename = "@RefType")]
@@ -1129,7 +1198,6 @@ pub struct CommentsCorrections {
 
 /// Wraps a collection of related comment and correction references.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "CommentsCorrectionsList")]
 pub struct CommentsCorrectionsList {
     /// The references (1 or more).
     #[serde(rename = "CommentsCorrections")]
@@ -1138,7 +1206,6 @@ pub struct CommentsCorrectionsList {
 
 /// Represents an external databank containing supplementary datasets.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "DataBank")]
 pub struct DataBank {
     /// The name of the databank (e.g., PDB, ClinicalTrials.gov).
     #[serde(rename = "DataBankName")]
@@ -1151,7 +1218,6 @@ pub struct DataBank {
 
 /// A wrapper for a list of databanks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "DataBankList")]
 pub struct DataBankList {
     /// Indicates if the list is complete.
     #[serde(rename = "@CompleteYN", default)]
@@ -1182,7 +1248,6 @@ pub struct DateYMD {
 
 /// The name component of a Medical Subject Heading (MeSH) descriptor.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "DescriptorName")]
 pub struct DescriptorName {
     /// Indicates if this is a major topic of the article.
     #[serde(rename = "@MajorTopicYN", default)]
@@ -1208,7 +1273,6 @@ pub struct DescriptorName {
 
 /// Represents an electronic location ID, like a DOI or PII.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ELocationID")]
 pub struct ELocationID {
     /// The type of identifier.
     #[serde(rename = "@EIdType")]
@@ -1225,7 +1289,6 @@ pub struct ELocationID {
 
 /// Wraps a list of gene symbols referenced in the article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "GeneSymbolList")]
 pub struct GeneSymbolList {
     /// The gene symbols (1 or more).
     #[serde(rename = "GeneSymbol")]
@@ -1234,7 +1297,6 @@ pub struct GeneSymbolList {
 
 /// A generalized note attached to the document by the indexer or owner.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "GeneralNote")]
 pub struct GeneralNote {
     /// The organization that added the note.
     #[serde(rename = "@Owner", default)]
@@ -1247,7 +1309,6 @@ pub struct GeneralNote {
 
 /// Represents a research grant that supported the work in the publication.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Grant")]
 pub struct Grant {
     /// The unique ID of the grant.
     #[serde(rename = "GrantID")]
@@ -1268,7 +1329,6 @@ pub struct Grant {
 
 /// Wraps a collection of funding grants.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "GrantList")]
 pub struct GrantList {
     /// Indicates if the list is complete.
     #[serde(rename = "@CompleteYN", default)]
@@ -1281,30 +1341,59 @@ pub struct GrantList {
 
 /// Represents the historical timeline of the document's presence in PubMed.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "History")]
 pub struct History {
     /// The specific historical dates (1 or more).
     #[serde(rename = "PubMedPubDate")]
     pub pub_dates: Vec<PubMedPubDate>,
 }
 
-/// An abstract identifier string associated with an external source.
+/// An identifier associated with an external source.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Identifier")]
-pub struct Identifier {
-    /// The source or namespace of the identifier (e.g., ORCID).
-    #[serde(rename = "@Source")]
-    pub source: String,
+#[serde(tag = "@Source", content = "$text")]
+pub enum Identifier {
+    /// Open Researcher and Contributor ID
+    #[serde(rename = "ORCID", deserialize_with = "normalize_orcid")]
+    Orcid(String),
 
-    /// The identifier value.
-    #[serde(rename = "$text", default)]
-    pub value: String,
+    /// International Standard Name Identifier
+    #[serde(rename = "ISNI")]
+    Isni(String),
+
+    /// Global Research Identifier Database
+    #[serde(rename = "GRID")]
+    Grid(String),
+
+    /// Catch-all for any other source not explicitly defined above.
+    #[serde(untagged)]
+    Other {
+        /// The source of the identifier.
+        #[serde(rename = "@Source")]
+        source: String,
+
+        /// The identifier value.
+        #[serde(rename = "$text")]
+        value: String,
+    },
+}
+
+/// Normalizes the ORCID by removing the URL prefix and any trailing slashes.
+fn normalize_orcid<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    const ORCID_PREFIX: &str = "https://orcid.org/";
+
+    let s: String = String::deserialize(deserializer)?;
+
+    Ok(s.strip_prefix(ORCID_PREFIX)
+        .unwrap_or(&s)
+        .trim_end_matches('/')
+        .to_string())
 }
 
 /// Represents an investigator or collaborator who is not classified as and
 /// primary author.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Investigator")]
 pub struct Investigator {
     /// Indicates if the name is structurally valid.
     #[serde(rename = "@ValidYN", default)]
@@ -1337,7 +1426,6 @@ pub struct Investigator {
 
 /// Wraps a collection of investigators.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "InvestigatorList")]
 pub struct InvestigatorList {
     /// Optional identifier for the specific list of investigators.
     #[serde(rename = "@ID")]
@@ -1350,7 +1438,6 @@ pub struct InvestigatorList {
 
 /// Represents an International Standard Serial Number (ISSN).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ISSN")]
 pub struct Issn {
     /// The medium type of the ISSN (Print or Electronic).
     #[serde(rename = "@IssnType")]
@@ -1363,7 +1450,6 @@ pub struct Issn {
 
 /// A generic list of categorized text items.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ItemList")]
 pub struct ItemList {
     /// The category or type of the list.
     #[serde(rename = "@ListType")]
@@ -1376,7 +1462,6 @@ pub struct ItemList {
 
 /// Contains identifying information for the journal publishing the article.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Journal")]
 pub struct Journal {
     /// The journal's ISSN.
     #[serde(rename = "ISSN")]
@@ -1397,7 +1482,6 @@ pub struct Journal {
 
 /// Contains information regarding a specific publication issue of a journal.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "JournalIssue")]
 pub struct JournalIssue {
     /// The medium of the issue (Print or Internet).
     #[serde(rename = "@CitedMedium")]
@@ -1418,7 +1502,6 @@ pub struct JournalIssue {
 
 /// Represents a single indexing keyword. Mixed content converts to Markdown.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Keyword")]
 pub struct Keyword {
     /// Indicates if the keyword is a major topic.
     #[serde(rename = "@MajorTopicYN", default)]
@@ -1435,7 +1518,6 @@ pub struct Keyword {
 
 /// Wraps a collection of indexing keywords.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "KeywordList")]
 pub struct KeywordList {
     /// The organization providing the keyword list.
     #[serde(rename = "@Owner", default)]
@@ -1449,7 +1531,6 @@ pub struct KeywordList {
 /// Provides a structural label for locations within a document (e.g.,
 /// 'Chapter 5').
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "LocationLabel")]
 pub struct LocationLabel {
     /// The structural classification (e.g., Chapter, Section).
     #[serde(rename = "@Type")]
@@ -1462,7 +1543,6 @@ pub struct LocationLabel {
 
 /// Contains internal NLM cataloging information for the journal.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "MedlineJournalInfo")]
 pub struct MedlineJournalInfo {
     /// The country of publication.
     #[serde(rename = "Country")]
@@ -1484,7 +1564,6 @@ pub struct MedlineJournalInfo {
 /// Represents a single Medical Subject Heading (MeSH) applied to the
 /// document.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "MeshHeading")]
 pub struct MeshHeading {
     /// The primary concept name.
     #[serde(rename = "DescriptorName")]
@@ -1497,7 +1576,6 @@ pub struct MeshHeading {
 
 /// Wraps a collection of MeSH headings.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "MeshHeadingList")]
 pub struct MeshHeadingList {
     /// The MeSH headings (1 or more).
     #[serde(rename = "MeshHeading")]
@@ -1507,7 +1585,6 @@ pub struct MeshHeadingList {
 /// Represents the name of a chemical substance associated with a MeSH
 /// heading.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "NameOfSubstance")]
 pub struct NameOfSubstance {
     /// The unique identifier.
     #[serde(rename = "@UI")]
@@ -1520,7 +1597,6 @@ pub struct NameOfSubstance {
 
 /// A generic PubMed object holding arbitrary parameterized metadata.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Object")]
 pub struct PubmedObject {
     /// The structural type of the object.
     #[serde(rename = "@Type")]
@@ -1533,7 +1609,6 @@ pub struct PubmedObject {
 
 /// A wrapper for a list of abstract PubMed objects.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ObjectList")]
 pub struct ObjectList {
     /// The objects (1 or more).
     #[serde(rename = "Object")]
@@ -1542,7 +1617,6 @@ pub struct ObjectList {
 
 /// Represents an abstract provided by an organization other than NLM.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "OtherAbstract")]
 pub struct OtherAbstract {
     /// The type or source of the abstract.
     #[serde(rename = "@Type")]
@@ -1568,7 +1642,6 @@ fn default_lang() -> String {
 
 /// Represents a tracking identifier assigned by a non-NLM organization.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "OtherID")]
 pub struct OtherId {
     /// The source organization.
     #[serde(rename = "@Source")]
@@ -1581,7 +1654,6 @@ pub struct OtherId {
 
 /// Represents a PubMed Unique Identifier.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PMID")]
 pub struct Pmid {
     /// The version of the PMID.
     #[serde(rename = "@Version")]
@@ -1597,7 +1669,6 @@ pub struct Pmid {
 /// DTD: ((StartPage, EndPage?, MedlinePgn?) | MedlinePgn).
 /// Flattened in Rust: all fields are optional, enabling runtime validation.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Pagination")]
 pub struct Pagination {
     /// The starting page.
     #[serde(rename = "StartPage")]
@@ -1615,7 +1686,6 @@ pub struct Pagination {
 
 /// A key-value pair representing an arbitrary parameter.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Param")]
 pub struct Param {
     /// The name of the parameter.
     #[serde(rename = "@Name")]
@@ -1629,7 +1699,6 @@ pub struct Param {
 /// Represents a specific individual who is a primary subject of the article
 /// (e.g., in a biography).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PersonalNameSubject")]
 pub struct PersonalNameSubject {
     /// The person's surname.
     #[serde(rename = "LastName")]
@@ -1650,7 +1719,6 @@ pub struct PersonalNameSubject {
 
 /// Wraps a collection of personal name subjects.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PersonalNameSubjectList")]
 pub struct PersonalNameSubjectList {
     /// The subjects (1 or more).
     #[serde(rename = "PersonalNameSubject")]
@@ -1661,7 +1729,6 @@ pub struct PersonalNameSubjectList {
 ///
 /// DTD: ((Year, ((Month, Day?) | Season)?) | MedlineDate).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubDate")]
 pub struct PubDate {
     /// The publication year.
     #[serde(rename = "Year")]
@@ -1686,7 +1753,6 @@ pub struct PubDate {
 
 /// Represents a granular timestamp in the document's PubMed timeline.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PubMedPubDate")]
 pub struct PubMedPubDate {
     /// The life-cycle event this timestamp represents.
     #[serde(rename = "@PubStatus")]
@@ -1719,7 +1785,6 @@ pub struct PubMedPubDate {
 
 /// Contains information about the publishing entity.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Publisher")]
 pub struct Publisher {
     /// The name of the publisher.
     #[serde(rename = "PublisherName")]
@@ -1732,7 +1797,6 @@ pub struct Publisher {
 
 /// Identifies the semantic type of publication (e.g., "Review", "Editorial").
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PublicationType")]
 pub struct PublicationType {
     /// The unique identifier.
     #[serde(rename = "@UI")]
@@ -1745,7 +1809,6 @@ pub struct PublicationType {
 
 /// Wraps a collection of publication types.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "PublicationTypeList")]
 pub struct PublicationTypeList {
     /// The publication types (1 or more).
     #[serde(rename = "PublicationType", default)]
@@ -1754,7 +1817,6 @@ pub struct PublicationTypeList {
 
 /// Further categorizes a primary `DescriptorName` in a MeSH Heading.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "QualifierName")]
 pub struct QualifierName {
     /// Implied automated assignment attribute.
     #[serde(rename = "@AutoHM")]
@@ -1775,7 +1837,6 @@ pub struct QualifierName {
 
 /// Represents a single bibliographic reference cited within the document.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Reference")]
 pub struct Reference {
     /// The raw citation text.
     #[serde(rename = "Citation")]
@@ -1789,7 +1850,6 @@ pub struct Reference {
 /// Wraps a collection of bibliographic references, supporting recursive
 /// sub-lists.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "ReferenceList")]
 pub struct ReferenceList {
     /// The title of the reference list.
     #[serde(rename = "Title")]
@@ -1807,7 +1867,6 @@ pub struct ReferenceList {
 /// Represents a structural section within a document, allowing for deep
 /// nesting.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Section")]
 pub struct Section {
     /// The structural location type.
     #[serde(rename = "LocationLabel")]
@@ -1824,7 +1883,6 @@ pub struct Section {
 
 /// Wraps a collection of structural document sections.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "Sections")]
 pub struct Sections {
     /// The sections (1 or more).
     #[serde(rename = "Section")]
@@ -1834,7 +1892,6 @@ pub struct Sections {
 /// Represents a supplementary MeSH concept (like a specific rare disease or
 /// chemical).
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "SupplMeshName")]
 pub struct SupplMeshName {
     /// The specific category of the concept.
     #[serde(rename = "@Type")]
@@ -1851,7 +1908,6 @@ pub struct SupplMeshName {
 
 /// Wraps a collection of supplementary MeSH concepts.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename = "SupplMeshList")]
 pub struct SupplMeshList {
     /// The concept names (1 or more).
     #[serde(rename = "SupplMeshName")]

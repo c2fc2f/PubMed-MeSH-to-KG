@@ -28,10 +28,17 @@ missing_docs_in_private_items = "warn"
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
 
+[features]
+default = []
+debug_path = [
+  "pubmed/debug_path"
+]
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 mimalloc = { version = "0.1", features = ["v3"] }
 futures = "0.3"
 pubmed = { path = "crates/pubmed/" }
-csv-async = { version = "1", features = ["tokio"] }
+csv = "1"
+

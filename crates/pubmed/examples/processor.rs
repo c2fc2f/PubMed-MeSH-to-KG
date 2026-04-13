@@ -2,8 +2,13 @@
 
 use clap::Parser;
 use futures::{StreamExt, stream};
-use pubmed::{PubMed, PubMedBuilder};
-use std::{error::Error, num::NonZero};
+use pubmed::{PubMed, PubMedBuilder, chunks::models::PubmedArticle};
+use std::{
+    error::Error,
+    num::NonZero,
+    ops::AddAssign,
+    sync::{Arc, Mutex},
+};
 
 #[global_allocator]
 /// Custom allocator to use less memory and speed up the process
@@ -44,29 +49,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Parallelism: {parallelism}");
 
-    let total: usize = stream::iter(pubmed.chunks().await?)
-        .enumerate()
-        .skip(args.skip)
-        .map(|(idx, fut)| async move {
-            match fut.await {
-                Err(e) => {
-                    eprintln!("error on {idx}\n{e:?}");
-                    0
-                }
-                Ok(chunk) => {
-                    let count: usize =
-                        chunk.articles.len() + chunk.book_articles.len();
-                    println!("{idx:>4} - number of articles: {count}");
-                    drop(chunk);
-                    count
-                }
-            }
-        })
-        .buffer_unordered(parallelism.get())
-        .fold(0, |acc, n| async move { acc + n })
-        .await;
+    let nb: Arc<Mutex<usize>> = Arc::new(Mutex::new(0));
 
-    println!("Articles total: {total}");
+    stream::iter(pubmed.chunks().await?.processor({
+        let nb: Arc<Mutex<usize>> = Arc::clone(&nb);
+        move |_: PubmedArticle| {
+            nb.lock().unwrap().add_assign(1);
+        }
+    }))
+    .enumerate()
+    .skip(args.skip)
+    .for_each_concurrent(parallelism.get(), |(idx, fut)| async move {
+        if let Err(e) = fut.await {
+            eprintln!("error on {idx}\n{e:?}");
+        }
+    })
+    .await;
+
+    println!("Articles total: {}", nb.lock().unwrap());
 
     Ok(())
 }
