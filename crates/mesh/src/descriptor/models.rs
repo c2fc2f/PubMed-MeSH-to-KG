@@ -81,7 +81,7 @@ pub struct DescriptorRecord {
 
     /// MeSH tree location codes for this descriptor.
     #[serde(rename = "TreeNumberList")]
-    pub tree_number: Option<TreeNumberList>,
+    pub tree_numbers: Option<TreeNumberList>,
 
     /// All concepts.
     #[serde(rename = "ConceptList")]

@@ -1381,14 +1381,18 @@ fn normalize_orcid<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
-    const ORCID_PREFIX: &str = "https://orcid.org/";
+    const ORCID_PREFIX_HTTPS: &str = "https://orcid.org/";
+    const ORCID_PREFIX_HTTP: &str = "http://orcid.org/";
 
     let s: String = String::deserialize(deserializer)?;
 
-    Ok(s.strip_prefix(ORCID_PREFIX)
+    let id: &str = s
+        .strip_prefix(ORCID_PREFIX_HTTPS)
+        .or_else(|| s.strip_prefix(ORCID_PREFIX_HTTP))
         .unwrap_or(&s)
-        .trim_end_matches('/')
-        .to_string())
+        .trim_end_matches('/');
+
+    Ok(id.to_string())
 }
 
 /// Represents an investigator or collaborator who is not classified as and

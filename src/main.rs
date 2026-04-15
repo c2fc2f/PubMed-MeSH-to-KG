@@ -13,13 +13,16 @@ use std::{
 use clap::Parser;
 use dirs::cache_dir;
 use futures::{StreamExt, stream};
-use mesh::MeSH;
+use mesh::{
+    MeSH, descriptor::models::DescriptorRecord,
+    qualifier::models::QualifierRecord,
+};
 use pubmed::{
     PubMed,
     chunks::{Chunks, models::PubmedArticle},
 };
 
-use crate::saver::Saver;
+use crate::saver::{mesh::SaverMeSH, pubmed::SaverPubMed};
 
 #[global_allocator]
 /// Custom allocator to use less memory and speed up the process
@@ -59,14 +62,6 @@ async fn main() -> ExitCode {
         })
         .build();
 
-    let _mesh: MeSH = MeSH::builder()
-        .cache(if args.no_cache {
-            None
-        } else {
-            cache_dir().map(|d| d.join("pm2kg/mesh"))
-        })
-        .build();
-
     let parallelism: NonZero<usize> = args.parallel.unwrap_or_else(|| {
         std::thread::available_parallelism()
             .unwrap_or(NonZero::new(1).expect("1 is not 0"))
@@ -80,7 +75,7 @@ async fn main() -> ExitCode {
         }
     };
 
-    let saver: Arc<Mutex<Saver>> = match Saver::new(&args.output) {
+    let saver: Arc<Mutex<SaverPubMed>> = match SaverPubMed::new(&args.output) {
         Ok(s) => Arc::new(Mutex::new(s)),
         Err(e) => {
             eprintln!("Error during creation of the CSV files:\n{:?}", e);
@@ -89,7 +84,7 @@ async fn main() -> ExitCode {
     };
 
     stream::iter(chunks.processor({
-        let saver: Arc<Mutex<Saver>> = Arc::clone(&saver);
+        let saver: Arc<Mutex<SaverPubMed>> = Arc::clone(&saver);
         move |article: PubmedArticle| {
             saver.lock().unwrap().add_article(&article).unwrap();
         }
@@ -102,6 +97,58 @@ async fn main() -> ExitCode {
         });
     })
     .await;
+
+    match saver.lock().unwrap().flush() {
+        Ok(_) => (),
+        Err(e) => {
+            eprintln!("Error during flushing of the CSV files:\n{:?}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    drop(pubmed);
+
+    let saver: Arc<Mutex<SaverMeSH>> = match SaverMeSH::new(&args.output) {
+        Ok(s) => Arc::new(Mutex::new(s)),
+        Err(e) => {
+            eprintln!("Error during creation of the CSV files:\n{:?}", e);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mesh: MeSH = MeSH::builder()
+        .cache(if args.no_cache {
+            None
+        } else {
+            cache_dir().map(|d| d.join("pm2kg/mesh"))
+        })
+        .build();
+
+    if let Err(e) = mesh
+        .descriptor({
+            let saver: Arc<Mutex<SaverMeSH>> = Arc::clone(&saver);
+            move |desc: DescriptorRecord| {
+                saver.lock().unwrap().add_descriptor(&desc).unwrap();
+            }
+        })
+        .await
+    {
+        eprintln!("Error during writing of the CSV files:\n{:?}", e);
+        return ExitCode::FAILURE;
+    };
+
+    if let Err(e) = mesh
+        .qualifier({
+            let saver: Arc<Mutex<SaverMeSH>> = Arc::clone(&saver);
+            move |qual: QualifierRecord| {
+                saver.lock().unwrap().add_qualifier(&qual).unwrap();
+            }
+        })
+        .await
+    {
+        eprintln!("Error during writing of the CSV files:\n{:?}", e);
+        return ExitCode::FAILURE;
+    };
 
     match saver.lock().unwrap().flush() {
         Ok(_) => (),
