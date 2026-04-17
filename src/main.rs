@@ -33,10 +33,6 @@ struct Args {
     #[arg(short, long)]
     parallel: Option<NonZero<usize>>,
 
-    /// Skip how many chunk
-    #[arg(short, long, default_value_t = 0)]
-    skip: usize,
-
     /// Enable caching
     #[arg(short, long)]
     no_cache: bool,
@@ -86,7 +82,6 @@ async fn main() -> ExitCode {
         }
     }))
     .enumerate()
-    .skip(args.skip)
     .for_each_concurrent(parallelism.get(), |(idx, fut)| async move {
         fut.await.map_err(|e| {
             panic!("Error on during the deserialization of {idx}\n{e:?}")
