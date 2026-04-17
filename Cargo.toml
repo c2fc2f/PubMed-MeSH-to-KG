@@ -5,9 +5,9 @@ edition = "2024"
 authors = [
   "c2fc2f <contact@c2fc2f.com>"
 ]
-description = "Converts the PubMed dataset into a CSV-based Knowledge Graph for Neo4j"
+description = "Converts the PubMed and MeSH dataset into a CSV-based Knowledge Graph for Neo4j"
 readme = "README.md"
-repository = "https://github.com/c2fc2f/BioASQ-MeSH-to-KG"
+repository = "https://github.com/c2fc2f/PubMed-MeSH-to-KG"
 license = "MIT"
 keywords = [
   "pubmed", 
@@ -37,7 +37,8 @@ missing_panics_doc = "warn"
 [features]
 default = []
 debug_path = [
-  "pubmed/debug_path"
+  "pubmed/debug_path",
+  "mesh/debug_path"
 ]
 
 [dependencies]
@@ -49,3 +50,4 @@ pubmed = { path = "crates/pubmed/" }
 mesh = { path = "crates/mesh/" }
 csv = "1"
 dirs = "6"
+fxhash = "0.2"

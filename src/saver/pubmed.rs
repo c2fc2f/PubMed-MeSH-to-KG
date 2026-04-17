@@ -1,66 +1,73 @@
 //! Module of a SaverPubMed to CSV
 
-use std::{collections::HashSet, fs::File, path::Path};
+use std::{
+    path::Path,
+    sync::{Mutex, MutexGuard},
+};
 
-use csv::Writer;
+use fxhash::FxHashSet;
 use pubmed::chunks::models::{
     ArticleIdType, Author, AuthorType, DateYMD, Identifier, Journal, Keyword,
     KeywordListOwner, MedlineJournalInfo, MeshHeading, PubmedArticle,
-    QualifierName, YN,
+    QualifierName, SupplMeshName, YN,
 };
 
-use crate::writer;
+use crate::{saver::Writer, writer};
 
 /// Struct that regroup CSV Files
+#[derive(Debug)]
 pub struct SaverPubMed {
     /// CSV Writer for Article Nodes
-    articles: Writer<File>,
+    articles: Writer,
 
     /// CSV Writer for Person Nodes
-    persons: Writer<File>,
+    persons: Writer,
     /// Set of the ID of saved person node
-    person_id: HashSet<String>,
+    person_id: Mutex<FxHashSet<String>>,
 
     /// CSV Writer for Collective Nodes
-    collectives: Writer<File>,
+    collectives: Writer,
     /// Set of the ID of saved collective node
-    collective_id: HashSet<String>,
+    collective_id: Mutex<FxHashSet<String>>,
 
     /// CSV Writer for Journal Nodes
-    journals: Writer<File>,
+    journals: Writer,
     /// Set of the ID of saved journal node
-    journal_id: HashSet<String>,
+    journal_id: Mutex<FxHashSet<String>>,
 
     /// CSV Writer for Keyword Nodes
-    keywords: Writer<File>,
+    keywords: Writer,
     /// Set of the ID of saved keyword node
-    keyword_id: HashSet<String>,
+    keyword_id: Mutex<FxHashSet<String>>,
 
     /// CSV Writer for MeSHQualified Nodes
-    mesh_qualifieds: Writer<File>,
+    pub(crate) mesh_qualifieds: Writer,
     /// Set of the ID of saved MeSHQualified node
-    qualified_id: HashSet<String>,
+    pub(crate) qualified_id: Mutex<FxHashSet<String>>,
 
     /// CSV Writer for HAS_AUTHOR Relation
-    has_author: Writer<File>,
+    has_author: Writer,
 
     /// CSV writer for IS_PART_OF Relation
-    is_part_of: Writer<File>,
+    is_part_of: Writer,
 
     /// CSV writer for HAS_KEYWORD Relation
-    has_keyword: Writer<File>,
+    has_keyword: Writer,
 
     /// CSV writer for CITES Relation
-    cites: Writer<File>,
+    cites: Writer,
 
     /// CSV Writer for HAS_MESH Relation
-    has_mesh: Writer<File>,
+    has_mesh: Writer,
+
+    /// CSV Writer for HAS_SUPPLEMENTARY_MESH Relation
+    has_supplementary_mesh: Writer,
 
     /// CSV Writer for HAS_DESCRIPTOR Relation
-    has_descriptor: Writer<File>,
+    pub(crate) has_descriptor: Writer,
 
     /// CSV Writer for HAS_QUALIFIER Relation
-    has_qualifier: Writer<File>,
+    pub(crate) has_qualifier: Writer,
 }
 
 impl SaverPubMed {
@@ -90,9 +97,15 @@ impl SaverPubMed {
                     "orcid",
                 ]
             ),
-            person_id: HashSet::new(),
+            person_id: Mutex::new(FxHashSet::with_capacity_and_hasher(
+                35_000_000,
+                Default::default(),
+            )),
             collectives: writer!(dir, "Collective", ["name:ID(Agent)",]),
-            collective_id: HashSet::new(),
+            collective_id: Mutex::new(FxHashSet::with_capacity_and_hasher(
+                241_000,
+                Default::default(),
+            )),
             journals: writer!(
                 dir,
                 "Journal",
@@ -105,19 +118,28 @@ impl SaverPubMed {
                     "isoAbbreviation",
                 ]
             ),
-            journal_id: HashSet::new(),
+            journal_id: Mutex::new(FxHashSet::with_capacity_and_hasher(
+                50_000,
+                Default::default(),
+            )),
             keywords: writer!(
                 dir,
                 "Keyword",
                 [":ID(Keyword)", "value", "supplier",]
             ),
-            keyword_id: HashSet::new(),
+            keyword_id: Mutex::new(FxHashSet::with_capacity_and_hasher(
+                11_000_000,
+                Default::default(),
+            )),
             mesh_qualifieds: writer!(
                 dir,
                 "MeSHQualified",
                 [":ID(MeSHQualified)"]
             ),
-            qualified_id: HashSet::new(),
+            qualified_id: Mutex::new(FxHashSet::with_capacity_and_hasher(
+                6_000_000,
+                Default::default(),
+            )),
             has_author: writer!(
                 dir,
                 "HAS_AUTHOR",
@@ -141,51 +163,67 @@ impl SaverPubMed {
             has_mesh: writer!(
                 dir,
                 "HAS_MESH",
-                [":START_ID(Article)", ":END_ID(MeSHQualified)",]
+                [
+                    ":START_ID(Article)",
+                    "descriptorIsMajorTopic:boolean",
+                    "qualifierMajorTopics:string[]",
+                    ":END_ID(MeSHQualified)",
+                ]
+            ),
+            has_supplementary_mesh: writer!(
+                dir,
+                "HAS_SUPPLEMENTARY_MESH",
+                [":START_ID(Article)", ":END_ID(MeSH)",]
             ),
             has_descriptor: writer!(
                 dir,
                 "HAS_DESCRIPTOR",
-                [
-                    ":START_ID(MeSHQualified)",
-                    "majorTopic:boolean",
-                    ":END_ID(MeSH)",
-                ]
+                [":START_ID(MeSHQualified)", ":END_ID(MeSH)",]
             ),
             has_qualifier: writer!(
                 dir,
                 "HAS_QUALIFIER",
-                [
-                    ":START_ID(MeSHQualified)",
-                    "majorTopic:boolean",
-                    ":END_ID(MeSH)",
-                ]
+                [":START_ID(MeSHQualified)", ":END_ID(MeSH)",]
             ),
         })
     }
 
     /// Flush every CSV file
-    pub fn flush(&mut self) -> std::io::Result<()> {
-        self.articles.flush()?;
-        self.persons.flush()?;
-        self.collectives.flush()?;
-        self.journals.flush()?;
-        self.keywords.flush()?;
-        self.mesh_qualifieds.flush()?;
-        self.has_author.flush()?;
-        self.is_part_of.flush()?;
-        self.has_keyword.flush()?;
-        self.cites.flush()?;
-        self.has_mesh.flush()?;
-        self.has_descriptor.flush()?;
-        self.has_qualifier.flush()?;
+    pub fn flush(&self) -> std::io::Result<()> {
+        self.articles.lock().unwrap().flush()?;
+        self.persons.lock().unwrap().flush()?;
+        self.collectives.lock().unwrap().flush()?;
+        self.journals.lock().unwrap().flush()?;
+        self.keywords.lock().unwrap().flush()?;
+        self.mesh_qualifieds.lock().unwrap().flush()?;
+        self.has_author.lock().unwrap().flush()?;
+        self.is_part_of.lock().unwrap().flush()?;
+        self.has_keyword.lock().unwrap().flush()?;
+        self.cites.lock().unwrap().flush()?;
+        self.has_mesh.lock().unwrap().flush()?;
+        self.has_supplementary_mesh.lock().unwrap().flush()?;
+        self.has_descriptor.lock().unwrap().flush()?;
+        self.has_qualifier.lock().unwrap().flush()?;
 
+        Ok(())
+    }
+
+    /// Save one MeSH Supplementary
+    pub fn add_supplementary_mesh(
+        &self,
+        mesh: &SupplMeshName,
+        pmid: &str,
+    ) -> std::io::Result<()> {
+        self.has_supplementary_mesh
+            .lock()
+            .unwrap()
+            .write_record([pmid, mesh.ui.as_str()])?;
         Ok(())
     }
 
     /// Save one MeSH
     pub fn add_mesh(
-        &mut self,
+        &self,
         mesh: &MeshHeading,
         pmid: &str,
     ) -> std::io::Result<()> {
@@ -198,66 +236,89 @@ impl SaverPubMed {
         let quals: String = quals.join(":");
         let mesh_id: String = format!("{}-{}", mesh.descriptor_name.ui, quals);
 
-        self.has_mesh.write_record([pmid, &mesh_id])?;
+        self.has_mesh.lock().unwrap().write_record([
+            pmid,
+            if matches!(mesh.descriptor_name.major_topic_yn, YN::Y) {
+                "true"
+            } else {
+                "false"
+            },
+            mesh.qualifier_names
+                .iter()
+                .filter_map(|qual| {
+                    matches!(qual.major_topic_yn, YN::Y)
+                        .then_some(qual.ui.as_str())
+                })
+                .collect::<Vec<&str>>()
+                .join(";")
+                .as_str(),
+            &mesh_id,
+        ])?;
 
-        if !self.qualified_id.contains(&mesh_id) {
-            self.mesh_qualifieds.write_record([&mesh_id])?;
+        let mut qualified_id: MutexGuard<_> = self.qualified_id.lock().unwrap();
 
-            self.has_descriptor.write_record([
-                &mesh_id,
-                matches!(mesh.descriptor_name.major_topic_yn, YN::Y)
-                    .to_string()
-                    .as_str(),
-                mesh.descriptor_name.ui.as_str(),
-            ])?;
+        if !qualified_id.contains(&mesh_id) {
+            self.mesh_qualifieds
+                .lock()
+                .unwrap()
+                .write_record([&mesh_id])?;
+
+            self.has_descriptor
+                .lock()
+                .unwrap()
+                .write_record([&mesh_id, mesh.descriptor_name.ui.as_str()])?;
 
             for qual in mesh.qualifier_names.iter() {
-                self.has_qualifier.write_record([
-                    &mesh_id,
-                    matches!(qual.major_topic_yn, YN::Y).to_string().as_str(),
-                    qual.ui.as_str(),
-                ])?;
+                self.has_qualifier
+                    .lock()
+                    .unwrap()
+                    .write_record([&mesh_id, qual.ui.as_str()])?;
             }
 
-            self.qualified_id.insert(mesh_id);
+            qualified_id.insert(mesh_id);
         }
 
         Ok(())
     }
 
     /// Save one citation
-    pub fn add_cites(&mut self, source: &str, to: &str) -> std::io::Result<()> {
-        self.cites.write_record([source, to])?;
+    pub fn add_cites(&self, source: &str, to: &str) -> std::io::Result<()> {
+        self.cites.lock().unwrap().write_record([source, to])?;
         Ok(())
     }
 
     /// Save one keyword
     pub fn add_keyword(
-        &mut self,
+        &self,
         keyword: &Keyword,
         owner: &KeywordListOwner,
         pmid: &str,
     ) -> std::io::Result<()> {
-        let owner: String = format!("{owner:?}");
-        let keyword_id: String = format!("{owner}-{}", keyword.content);
+        let keyword_id: String =
+            format!("{}-{}", owner.as_str(), keyword.content);
 
-        self.has_keyword.write_record([pmid, &keyword_id])?;
+        self.has_keyword
+            .lock()
+            .unwrap()
+            .write_record([pmid, &keyword_id])?;
 
-        if !self.keyword_id.contains(&keyword_id) {
-            self.keywords.write_record([
+        let mut kid: MutexGuard<_> = self.keyword_id.lock().unwrap();
+
+        if !kid.contains(&keyword_id) {
+            self.keywords.lock().unwrap().write_record([
                 &keyword_id,
                 keyword.content.as_str(),
-                &owner,
+                owner.as_str(),
             ])?;
 
-            self.keyword_id.insert(keyword_id);
+            kid.insert(keyword_id);
         }
         Ok(())
     }
 
     /// Save one author
     pub fn add_author(
-        &mut self,
+        &self,
         author: &Author,
         pmid: &str,
     ) -> std::io::Result<()> {
@@ -282,10 +343,15 @@ impl SaverPubMed {
                     None => format!("{}-{}-{}", fore_name, last_name, suffix),
                 };
 
-                self.has_author.write_record([pmid, &person_id])?;
+                self.has_author
+                    .lock()
+                    .unwrap()
+                    .write_record([pmid, &person_id])?;
 
-                if !self.person_id.contains(&person_id) {
-                    self.persons.write_record([
+                let mut pid: MutexGuard<_> = self.person_id.lock().unwrap();
+
+                if !pid.contains(&person_id) {
+                    self.persons.lock().unwrap().write_record([
                         &person_id,
                         last_name,
                         fore_name,
@@ -294,14 +360,19 @@ impl SaverPubMed {
                         orcid.unwrap_or(""),
                     ])?;
 
-                    self.person_id.insert(person_id);
+                    pid.insert(person_id);
                 }
             }
             AuthorType::Collective { name } => {
-                if self.collective_id.insert(name.clone()) {
-                    self.collectives.write_record([name])?;
+                self.has_author.lock().unwrap().write_record([pmid, name])?;
+
+                let mut collective_id: MutexGuard<_> =
+                    self.collective_id.lock().unwrap();
+
+                if !collective_id.contains(name) {
+                    collective_id.insert(name.clone());
+                    self.collectives.lock().unwrap().write_record([name])?;
                 }
-                self.has_author.write_record([pmid, name])?;
             }
         }
 
@@ -310,23 +381,26 @@ impl SaverPubMed {
 
     /// Save one journal
     pub fn add_journal(
-        &mut self,
+        &self,
         journal: &Journal,
         journal_info: &MedlineJournalInfo,
         pmid: &str,
     ) -> std::io::Result<()> {
-        let journal_id: String = match &journal_info.nlm_unique_id {
-            Some(nlm) => format!("NLM:{}", nlm),
-            None => {
-                format!("TA:{}", journal_info.medline_ta)
-            }
+        let journal_id: &str = match &journal_info.nlm_unique_id {
+            Some(nlm) => nlm,
+            None => &journal_info.medline_ta,
         };
 
-        self.is_part_of.write_record([pmid, &journal_id])?;
+        self.is_part_of
+            .lock()
+            .unwrap()
+            .write_record([pmid, journal_id])?;
 
-        if !self.journal_id.contains(&journal_id) {
-            self.journals.write_record([
-                &journal_id,
+        let mut jid: MutexGuard<_> = self.journal_id.lock().unwrap();
+
+        if !jid.contains(journal_id) {
+            self.journals.lock().unwrap().write_record([
+                journal_id,
                 journal.title.as_deref().unwrap_or(""),
                 journal_info.country.as_deref().unwrap_or(""),
                 journal_info.nlm_unique_id.as_deref().unwrap_or(""),
@@ -338,17 +412,14 @@ impl SaverPubMed {
                 journal.iso_abbreviation.as_deref().unwrap_or(""),
             ])?;
 
-            self.journal_id.insert(journal_id);
+            jid.insert(journal_id.to_string());
         }
 
         Ok(())
     }
 
     /// Save one article
-    pub fn add_article(
-        &mut self,
-        article: &PubmedArticle,
-    ) -> std::io::Result<()> {
+    pub fn add_article(&self, article: &PubmedArticle) -> std::io::Result<()> {
         let pmid: String = article.medline_citation.pmid.value.to_string();
 
         let abstract_text: String = article
@@ -365,7 +436,7 @@ impl SaverPubMed {
             })
             .unwrap_or_default();
 
-        self.articles.write_record([
+        self.articles.lock().unwrap().write_record([
             &pmid,
             &article.medline_citation.article.title.content,
             &abstract_text,
@@ -388,6 +459,12 @@ impl SaverPubMed {
         if let Some(meshs) = &article.medline_citation.mesh_heading_list {
             for mesh in meshs.headings.iter() {
                 self.add_mesh(mesh, &pmid)?;
+            }
+        }
+
+        if let Some(suppls) = &article.medline_citation.suppl_mesh_list {
+            for mesh in suppls.names.iter() {
+                self.add_supplementary_mesh(mesh, &pmid)?;
             }
         }
 

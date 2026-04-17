@@ -308,6 +308,21 @@ pub enum KeywordListOwner {
     HHS,
 }
 
+impl KeywordListOwner {
+    /// Convert the enum into a static str
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NLM => "NLM",
+            Self::NLMAUTO => "NLM-AUTO",
+            Self::NASA => "NASA",
+            Self::PIP => "PIP3",
+            Self::KIE => "KIE",
+            Self::NOTNLM => "NOTNLM",
+            Self::HHS => "HHS",
+        }
+    }
+}
+
 /// Indicates the category of a supplementary MeSH concept.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum SupplMeshNameType {

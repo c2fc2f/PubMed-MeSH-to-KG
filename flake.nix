@@ -1,5 +1,5 @@
 {
-  description = "CLI tool that converts the PubMed dataset into a CSV-based Knowledge Graph representation (Neo4J)";
+  description = "CLI tool that converts the PubMed and MeSH dataset into a CSV-based Knowledge Graph representation (Neo4J)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

@@ -77,7 +77,7 @@ pub struct DescriptorRecord {
 
     /// Descriptors representing pharmacological actions of this substance
     #[serde(rename = "PharmacologicalActionList")]
-    pub pharmacological_action: Option<PharmacologicalActionList>,
+    pub pharmacological_actions: Option<PharmacologicalActionList>,
 
     /// MeSH tree location codes for this descriptor.
     #[serde(rename = "TreeNumberList")]
@@ -332,7 +332,7 @@ pub struct ConceptRelationList {
 }
 
 /// Semantic relationship type between two concepts
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RelationName {
     /// Narrower — the second concept is more specific than the first.
     NRW,

@@ -13,6 +13,8 @@ The MeSH dataset is split into three record types, each stored in a dedicated XM
 | `MeSH::descriptor` | `descXXXX.xml` | `DescriptorRecord` |
 | `MeSH::qualifier` | `qualXXXX.xml` | `QualifierRecord` |
 | `MeSH::supplemental` | `suppXXXX.xml` | `SupplementalRecord` |
+| `MeSH::pharmacological_action` | `paXXXX.xml` | `PharmacologicalActionRecord` |
+
 
 ## Installation
 

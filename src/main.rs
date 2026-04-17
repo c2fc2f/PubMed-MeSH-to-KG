@@ -3,12 +3,7 @@
 
 mod saver;
 
-use std::{
-    num::NonZero,
-    path::PathBuf,
-    process::ExitCode,
-    sync::{Arc, Mutex},
-};
+use std::{num::NonZero, path::PathBuf, process::ExitCode, sync::Arc};
 
 use clap::Parser;
 use dirs::cache_dir;
@@ -16,6 +11,7 @@ use futures::{StreamExt, stream};
 use mesh::{
     MeSH, descriptor::models::DescriptorRecord,
     qualifier::models::QualifierRecord,
+    supplemental::models::SupplementalRecord,
 };
 use pubmed::{
     PubMed,
@@ -75,8 +71,8 @@ async fn main() -> ExitCode {
         }
     };
 
-    let saver: Arc<Mutex<SaverPubMed>> = match SaverPubMed::new(&args.output) {
-        Ok(s) => Arc::new(Mutex::new(s)),
+    let saver: Arc<SaverPubMed> = match SaverPubMed::new(&args.output) {
+        Ok(s) => Arc::new(s),
         Err(e) => {
             eprintln!("Error during creation of the CSV files:\n{:?}", e);
             return ExitCode::FAILURE;
@@ -84,9 +80,9 @@ async fn main() -> ExitCode {
     };
 
     stream::iter(chunks.processor({
-        let saver: Arc<Mutex<SaverPubMed>> = Arc::clone(&saver);
+        let saver: Arc<SaverPubMed> = Arc::clone(&saver);
         move |article: PubmedArticle| {
-            saver.lock().unwrap().add_article(&article).unwrap();
+            saver.add_article(&article).unwrap();
         }
     }))
     .enumerate()
@@ -98,7 +94,10 @@ async fn main() -> ExitCode {
     })
     .await;
 
-    match saver.lock().unwrap().flush() {
+    let saver: SaverPubMed =
+        Arc::try_unwrap(saver).expect("Arc still has multiple owners!");
+
+    match saver.flush() {
         Ok(_) => (),
         Err(e) => {
             eprintln!("Error during flushing of the CSV files:\n{:?}", e);
@@ -108,8 +107,14 @@ async fn main() -> ExitCode {
 
     drop(pubmed);
 
-    let saver: Arc<Mutex<SaverMeSH>> = match SaverMeSH::new(&args.output) {
-        Ok(s) => Arc::new(Mutex::new(s)),
+    let saver: Arc<SaverMeSH> = match SaverMeSH::new(
+        &args.output,
+        saver.mesh_qualifieds,
+        saver.qualified_id,
+        saver.has_descriptor,
+        saver.has_qualifier,
+    ) {
+        Ok(s) => Arc::new(s),
         Err(e) => {
             eprintln!("Error during creation of the CSV files:\n{:?}", e);
             return ExitCode::FAILURE;
@@ -124,33 +129,35 @@ async fn main() -> ExitCode {
         })
         .build();
 
-    if let Err(e) = mesh
-        .descriptor({
-            let saver: Arc<Mutex<SaverMeSH>> = Arc::clone(&saver);
+    let (r1, r2, r3) = tokio::join!(
+        mesh.descriptor({
+            let saver = Arc::clone(&saver);
             move |desc: DescriptorRecord| {
-                saver.lock().unwrap().add_descriptor(&desc).unwrap();
+                saver.add_descriptor(&desc).unwrap();
             }
-        })
-        .await
-    {
-        eprintln!("Error during writing of the CSV files:\n{:?}", e);
-        return ExitCode::FAILURE;
-    };
-
-    if let Err(e) = mesh
-        .qualifier({
-            let saver: Arc<Mutex<SaverMeSH>> = Arc::clone(&saver);
+        }),
+        mesh.qualifier({
+            let saver = Arc::clone(&saver);
             move |qual: QualifierRecord| {
-                saver.lock().unwrap().add_qualifier(&qual).unwrap();
+                saver.add_qualifier(&qual).unwrap();
             }
-        })
-        .await
-    {
-        eprintln!("Error during writing of the CSV files:\n{:?}", e);
-        return ExitCode::FAILURE;
-    };
+        }),
+        mesh.supplemental({
+            let saver = Arc::clone(&saver);
+            move |supp: SupplementalRecord| {
+                saver.add_supplemental(&supp).unwrap();
+            }
+        }),
+    );
 
-    match saver.lock().unwrap().flush() {
+    for result in [r1, r2, r3] {
+        if let Err(e) = result {
+            eprintln!("Error during writing of the CSV files:\n{:?}", e);
+            return ExitCode::FAILURE;
+        }
+    }
+
+    match saver.flush() {
         Ok(_) => (),
         Err(e) => {
             eprintln!("Error during flushing of the CSV files:\n{:?}", e);

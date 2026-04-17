@@ -35,7 +35,7 @@ rustPlatform.buildRustPackage {
   buildInputs = [ ];
 
   meta = with lib; {
-    description = "CLI tool that converts the PubMed dataset into a CSV-based Knowledge Graph representation (Neo4J)";
+    description = "CLI tool that converts the PubMed and MeSH dataset into a CSV-based Knowledge Graph representation (Neo4J)";
     mainProgram = "pm2kg";
     homepage = "https://github.com/c2fc2f/PubMed-to-KG";
     license = licenses.mit;

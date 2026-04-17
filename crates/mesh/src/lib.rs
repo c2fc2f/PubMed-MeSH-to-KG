@@ -21,6 +21,7 @@
 //! | [`MeSH::descriptor`] | `descXXXX.xml` | [`DescriptorRecord`] |
 //! | [`MeSH::qualifier`] | `qualXXXX.xml` | [`QualifierRecord`] |
 //! | [`MeSH::supplemental`] | `suppXXXX.xml` | [`SupplementalRecord`] |
+//! | [`MeSH::pharmacological_action`] | `paXXXX.xml` | [`PharmacologicalActionRecord`] |
 //!
 //! ## Quick start
 //!
@@ -66,8 +67,8 @@
 //!
 //! When a cache directory is configured (the default when using
 //! [`MeSH::default`]), the downloaded XML files are written to disk on the
-//! first call and reused on subsequent calls. Files are written atomically via
-//! a `.tmp` rename to avoid leaving partially-written data.
+//! first call and reused on subsequent calls. Files are written atomically
+//! via a `.tmp` rename to avoid leaving partially-written data.
 //!
 //! ## Streaming design
 //!
@@ -95,9 +96,11 @@
 //! [`DescriptorRecord`]: crate::descriptor::models::DescriptorRecord
 //! [`QualifierRecord`]: crate::qualifier::models::QualifierRecord
 //! [`SupplementalRecord`]: crate::supplemental::models::SupplementalRecord
+//! [`PharmacologicalActionRecord`]: crate::pharmacological_action::models::PharmacologicalActionRecord
 
 pub mod descriptor;
 pub mod error;
+pub mod pharmacologial_action;
 pub mod qualifier;
 mod streaming;
 pub mod supplemental;
@@ -109,6 +112,9 @@ use reqwest::Url;
 use crate::{
     descriptor::{models::DescriptorRecord, process_descriptor},
     error::MeSHError,
+    pharmacologial_action::{
+        models::PharmacologicalActionRecord, process_pharmacological_action,
+    },
     qualifier::{models::QualifierRecord, process_qualifier},
     supplemental::{models::SupplementalRecord, process_supplemental},
 };
@@ -280,6 +286,16 @@ impl MeSH {
         record = QualifierRecord,
         regex = r#"href="(qual[^"]+\.xml)""#,
         label = "Qualifier",
+        error = MeSHError,
+        err_missing = MeSHError::MissingFile,
+    );
+
+    streaming_fetch_method!(
+        method = pharmacological_action,
+        process_fn = process_pharmacological_action,
+        record = PharmacologicalActionRecord,
+        regex = r#"href="(pa[^"]+\.xml)""#,
+        label = "Pharmacological Action",
         error = MeSHError,
         err_missing = MeSHError::MissingFile,
     );
