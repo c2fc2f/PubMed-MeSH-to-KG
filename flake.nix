@@ -31,9 +31,9 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          default = self.packages.${system}.bam2kg;
+          default = self.packages.${system}.pm2kg;
 
-          bam2kg = pkgs.callPackage ./nix/package.nix {
+          pm2kg = pkgs.callPackage ./nix/package.nix {
             version = self.rev or self.dirtyRev or "dirty";
           };
         }
