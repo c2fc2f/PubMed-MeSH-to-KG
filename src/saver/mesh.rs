@@ -86,22 +86,22 @@ impl<'a> SaverMeSH<'a> {
             mesh_descriptors: writer!(
                 dir,
                 "MeSHDescriptor",
-                ["dui:ID(MeSH)", "name", "class:int", "treePath:string[]"]
+                ["ui:ID(MeSH)", "name", "class:int", "treePath:string[]"]
             ),
             mesh_qualifiers: writer!(
                 dir,
                 "MeSHQualifier",
-                ["qui:ID(MeSH)", "name", "treePath:string[]"]
+                ["ui:ID(MeSH)", "name", "treePath:string[]"]
             ),
             mesh_supplemental: writer!(
                 dir,
                 "MeSHSupplemental",
-                ["sui:ID(MeSH)", "class:int", "name"]
+                ["ui:ID(MeSH)", "class:int", "name"]
             ),
             mesh_concept: writer!(
                 dir,
                 "MeSHConcept",
-                ["cui:ID(MeSH)", "CASNo1Name", "name"]
+                ["ui:ID(MeSH)", "CASNo1Name", "name"]
             ),
             mesh_qualifieds,
             qualified_id,
