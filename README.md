@@ -36,6 +36,8 @@ The compiled binary will be at `target/release/pm2kg`.
 A Nix flake is provided:
 
 ```bash
+nix run github:c2fc2f/PubMed-MeSH-to-KG -- --help
+# or
 nix build
 # or, to enter a development shell:
 nix develop
